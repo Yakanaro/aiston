@@ -6,6 +6,7 @@ class FakeLlmService
 {
     public function evaluate(array $segments): array
     {
+        usleep(150000);
         $score = rand(60, 95);
 
         return [

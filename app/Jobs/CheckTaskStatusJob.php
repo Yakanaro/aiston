@@ -51,14 +51,46 @@ class CheckTaskStatusJob implements ShouldQueue
             if (($result['status'] ?? TaskStatus::PROCESSING->value) === TaskStatus::COMPLETED->value) {
                 $task->setStatus(TaskStatus::PROCESSING)->save();
 
+                ExternalLog::create([
+                    'task_id' => $task->getId(),
+                    'service' => 'transcription',
+                    'direction' => 'request',
+                    'payload' => ['audio_url' => (string) ($task->getParams()['audio_url'] ?? '')],
+                    'message' => null,
+                ]);
+
                 $segments = $transcriptionService->process((string) ($task->getParams()['audio_url'] ?? ''));
+
+                ExternalLog::create([
+                    'task_id' => $task->getId(),
+                    'service' => 'transcription',
+                    'direction' => 'response',
+                    'payload' => ['segments' => $segments],
+                    'message' => null,
+                ]);
 
                 (new TaskTranscription)
                     ->setTaskId($task->getId())
                     ->setSegments($segments)
                     ->save();
 
+                ExternalLog::create([
+                    'task_id' => $task->getId(),
+                    'service' => 'llm',
+                    'direction' => 'request',
+                    'payload' => ['segments' => $segments],
+                    'message' => null,
+                ]);
+
                 $eval = $llmService->evaluate($segments);
+
+                ExternalLog::create([
+                    'task_id' => $task->getId(),
+                    'service' => 'llm',
+                    'direction' => 'response',
+                    'payload' => $eval,
+                    'message' => null,
+                ]);
 
                 (new TaskQaEvaluation)
                     ->setTaskId($task->getId())

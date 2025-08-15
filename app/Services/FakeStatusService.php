@@ -8,6 +8,7 @@ class FakeStatusService
 {
     public function getStatus(int $taskId): array
     {
+        usleep(100000);
         $statuses = [TaskStatus::PROCESSING->value, TaskStatus::COMPLETED->value];
         $status = $statuses[array_rand($statuses)];
 
