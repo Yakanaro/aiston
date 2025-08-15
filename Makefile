@@ -139,26 +139,19 @@ lint-fix: ## Fix PHP code style (Laravel Pint)
 # Token management commands
 token-create: ## Create new API token (usage: make token-create name="my-token")
 	@echo "Creating API token: $(name)"
-	@docker compose exec app php artisan token:issue --name=$(name) > /tmp/token.txt
-	@if [ -s /tmp/token.txt ]; then \
-		TOKEN=$$(cat /tmp/token.txt); \
-		echo "Token created: $$TOKEN"; \
-		if [ -f .env ]; then \
-			if grep -q "AUTH_TOKEN=" .env; then \
-				sed -i '' "s/AUTH_TOKEN=.*/AUTH_TOKEN=$$TOKEN/" .env; \
-				echo "Updated AUTH_TOKEN in .env"; \
-			else \
-				echo "AUTH_TOKEN=$$TOKEN" >> .env; \
-				echo "Added AUTH_TOKEN to .env"; \
-			fi; \
+	@TOKEN=$$(docker compose exec -T app php artisan token:issue --name=$(name) | tr -d '\r'); \
+	echo "Token created: $$TOKEN"; \
+	if [ -f .env ]; then \
+		if grep -q "^AUTH_TOKEN=" .env; then \
+			sed -i '' "s/^AUTH_TOKEN=.*/AUTH_TOKEN=$$TOKEN/" .env; \
+			echo "Updated AUTH_TOKEN in .env"; \
 		else \
-			echo "AUTH_TOKEN=$$TOKEN" > .env; \
-			echo "Created .env with AUTH_TOKEN"; \
+			echo "AUTH_TOKEN=$$TOKEN" >> .env; \
+			echo "Added AUTH_TOKEN to .env"; \
 		fi; \
-		rm /tmp/token.txt; \
 	else \
-		echo "Failed to create token"; \
-		exit 1; \
+		echo "AUTH_TOKEN=$$TOKEN" > .env; \
+		echo "Created .env with AUTH_TOKEN"; \
 	fi
 
 token-list: ## List all API tokens
